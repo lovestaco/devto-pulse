@@ -1,0 +1,22 @@
+{
+  "name": "devto-pulse",
+  "version": "0.1.0",
+  "description": "Web dashboard for your dev.to portfolio with stats history in PostgreSQL",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/server.js",
+    "worker": "node src/worker.js",
+    "migrate": "node src/migrate.js",
+    "sync": "node src/sync.js",
+    "dev": "node --env-file=.env --watch src/server.js",
+    "dev:migrate": "node --env-file=.env src/migrate.js",
+    "dev:sync": "node --env-file=.env src/sync.js",
+    "dev:worker": "node --env-file=.env src/worker.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}

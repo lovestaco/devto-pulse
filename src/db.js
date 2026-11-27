@@ -5,9 +5,24 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
+const useSsl = process.env.PGSSL === 'true';
+
+// Managed Postgres (e.g. Seenode) often signs its certificate with a per-project
+// CA. Recent `pg` versions treat `sslmode=require` in the URI as full
+// verification, and URI SSL params override the `ssl` option below, so strip
+// them and let PGSSL decide.
+function connectionString() {
+  if (!useSsl) return process.env.DATABASE_URL;
+  const url = new URL(process.env.DATABASE_URL);
+  for (const p of ['sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'uselibpqcompat']) {
+    url.searchParams.delete(p);
+  }
+  return url.toString();
+}
+
 export const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : undefined,
+  connectionString: connectionString(),
+  ssl: useSsl ? { rejectUnauthorized: false } : undefined,
   max: Number(process.env.PG_POOL_MAX || 5),
 });
 

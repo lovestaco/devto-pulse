@@ -24,6 +24,9 @@ export const pool = new pg.Pool({
   connectionString: connectionString(),
   ssl: useSsl ? { rejectUnauthorized: false } : undefined,
   max: Number(process.env.PG_POOL_MAX || 5),
+  connectionTimeoutMillis: 10_000,
 });
+
+console.log(`[db] host=${new URL(process.env.DATABASE_URL).hostname} ssl=${useSsl}`);
 
 export const query = (text, params) => pool.query(text, params);

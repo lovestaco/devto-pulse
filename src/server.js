@@ -137,10 +137,32 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'internal error' });
 });
 
-await migrate();
+// Listen first so the platform's health check sees the process, then reach
+// the database. A slow or misconfigured database shows up in the logs and in
+// /healthz instead of as a silent "application start failed".
 const port = Number(process.env.PORT || 3000);
-const server = app.listen(port, () => console.log(`[web] listening on :${port}`));
-const stopLoop = process.env.INPROCESS_SYNC === 'true' ? startSyncLoop() : () => {};
+const server = app.listen(port, '0.0.0.0', () => console.log(`[web] listening on 0.0.0.0:${port}`));
+server.on('error', (err) => {
+  console.error(`[web] cannot listen on :${port}: ${err.message}`);
+  process.exit(1);
+});
+
+let stopLoop = () => {};
+async function prepareDatabase() {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      console.log(`[db] connecting (attempt ${attempt})`);
+      await migrate();
+      console.log('[db] ready');
+      if (process.env.INPROCESS_SYNC === 'true') stopLoop = startSyncLoop();
+      return;
+    } catch (err) {
+      console.error(`[db] not ready: ${err.message}`);
+      await new Promise((r) => setTimeout(r, Math.min(attempt * 5_000, 30_000)));
+    }
+  }
+}
+prepareDatabase();
 
 for (const sig of ['SIGINT', 'SIGTERM']) {
   process.on(sig, () => {
